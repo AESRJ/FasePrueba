@@ -13,9 +13,9 @@ class AssetManager:
         # Configuración de pistas de música
         # Ajusta los nombres de archivo si es necesario
         self.music_tracks = {
-            "menu": "assets/music/Main.mp3",
-            "level_1": "assets/music/primer_Nivel.mp3",
-            "level_2": "assets/music/primer_Nivel.mp3" # Usamos la misma por ahora si no hay otra
+            "menu": "assets/music/Main.ogg",
+            "level_1": "assets/music/primer_Nivel.ogg",
+            "level_2": "assets/music/primer_Nivel.ogg" # Usamos la misma por ahora si no hay otra
         }
         
         self.current_track = None
