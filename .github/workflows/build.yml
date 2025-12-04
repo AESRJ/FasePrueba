@@ -27,8 +27,18 @@ jobs:
       - name: Build Game
         run: |
           cd $GITHUB_WORKSPACE
+          # Construimos el juego
           pygbag --build main.py
+          
+          # Renombramos main.html a index.html
           mv build/web/main.html build/web/index.html || true
+
+          # --- CORRECCIÓN CRÍTICA PARA EL VIDEO ---
+          # Creamos la carpeta assets en la versión web
+          mkdir -p build/web/assets
+          
+          # Copiamos el video manualmente para que quede "suelto" y el navegador lo vea
+          cp assets/intro.mp4 build/web/assets/intro.mp4
 
       # --- NUEVO PASO: DISEÑO CYBERPUNK ---
       - name: Beautify HTML and Add Intro Video
@@ -60,11 +70,11 @@ jobs:
               }
               
               /* ESTILOS DEL VIDEO INTRO */
-              #intro-overlay {
+             #intro-overlay {
                   position: fixed;
                   top: 0; left: 0; width: 100%; height: 100%;
-                  background-color: #000;
-                  z-index: 9999; /* Encima de todo */
+                  background-color: #000000 !important; /* Fondo negro forzado */
+                  z-index: 2147483647 !important; /* El número más alto posible en CSS */
                   display: flex;
                   flex-direction: column;
                   justify-content: center;
