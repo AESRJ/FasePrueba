@@ -33,145 +33,111 @@ jobs:
           # Renombramos main.html a index.html
           mv build/web/main.html build/web/index.html || true
 
-          # --- CORRECCIÓN CRÍTICA PARA EL VIDEO ---
-          # Creamos la carpeta assets en la versión web
+          # --- VITAL: CREAR CARPETA ASSETS Y COPIAR VIDEO ---
           mkdir -p build/web/assets
-          
-          # Copiamos el video manualmente para que quede "suelto" y el navegador lo vea
           cp assets/intro.mp4 build/web/assets/intro.mp4
 
-      # --- NUEVO PASO: DISEÑO CYBERPUNK ---
-      - name: Beautify HTML and Add Intro Video
+      # --- PASO DE DISEÑO E INTRODUCCIÓN ---
+      - name: Inject Video and Design
         run: |
           import os
           
           html_path = 'build/web/index.html'
           
-          # 1. ESTILOS (CSS): Diseño Cyberpunk + Capa de Video
+          # 1. EL CSS (ESTILO CYBERPUNK)
           custom_css = """
           <style>
               body {
-                  background-color: #050510;
+                  background-color: #050510 !important;
                   background-image: 
                       linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+                      linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px) !important;
                   background-size: 40px 40px;
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  height: 100vh;
-                  margin: 0;
-                  overflow: hidden;
               }
               canvas {
                   box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
                   border: 2px solid #00ffff;
                   border-radius: 8px;
               }
-              
-              /* ESTILOS DEL VIDEO INTRO */
-             #intro-overlay {
+              #intro-overlay {
                   position: fixed;
                   top: 0; left: 0; width: 100%; height: 100%;
-                  background-color: #000000 !important; /* Fondo negro forzado */
-                  z-index: 2147483647 !important; /* El número más alto posible en CSS */
+                  background-color: #000000 !important;
+                  z-index: 999999 !important;
                   display: flex;
                   flex-direction: column;
                   justify-content: center;
                   align-items: center;
               }
-              video {
-                  width: 100%;
-                  max-width: 1280px;
-                  height: auto;
-                  max-height: 100vh;
-              }
+              video { width: 100%; max-width: 1280px; height: auto; }
               #start-btn {
-                  margin-top: 20px;
-                  padding: 15px 40px;
-                  font-family: 'Courier New', monospace;
-                  font-size: 24px;
-                  font-weight: bold;
-                  color: #00ffff;
-                  background: transparent;
-                  border: 2px solid #00ffff;
-                  cursor: pointer;
-                  text-transform: uppercase;
-                  box-shadow: 0 0 15px #00ffff;
-                  transition: all 0.3s;
-                  position: absolute;
-                  bottom: 20%;
+                  margin-top: 20px; padding: 15px 40px;
+                  font-family: monospace; font-size: 24px; font-weight: bold;
+                  color: #00ffff; background: transparent; border: 2px solid #00ffff;
+                  cursor: pointer; box-shadow: 0 0 15px #00ffff; z-index: 1000000;
               }
-              #start-btn:hover {
-                  background: #00ffff;
-                  color: #000;
-              }
-              .hidden {
-                  opacity: 0;
-                  pointer-events: none;
-                  transition: opacity 1s ease-out;
-              }
+              #start-btn:hover { background: #00ffff; color: #000; }
+              .hidden { opacity: 0; pointer-events: none; transition: opacity 1s; }
           </style>
           """
 
-          # 2. ESTRUCTURA (HTML): El video y el botón
-          # Nota: Buscamos el archivo en assets. Si Pygbag lo movió, suele estar en la raíz relativa.
-          # Usamos apk/assets/intro.mp4 porque Pygbag empaqueta assets dentro de una carpeta virtual apk.
-          # Pero para HTML externo, intentamos acceder directo.
-          
+          # 2. EL HTML (VIDEO)
           video_html = """
           <div id="intro-overlay">
               <video id="myVideo" playsinline>
                   <source src="assets/intro.mp4" type="video/mp4">
-                  Tu navegador no soporta video.
               </video>
               <button id="start-btn">INICIAR SISTEMA</button>
           </div>
           """
 
-          # 3. LÓGICA (JS): Controlar reproducción y desaparición
+          # 3. EL JS (LOGICA)
           video_js = """
           <script>
-              window.onload = function() {
+              window.addEventListener('load', function() {
                   var overlay = document.getElementById('intro-overlay');
                   var vid = document.getElementById('myVideo');
                   var btn = document.getElementById('start-btn');
                   var canvas = document.getElementById('canvas');
-
-                  // Al hacer click en INICIAR
-                  btn.onclick = function() {
-                      btn.style.display = 'none'; // Ocultar botón
-                      vid.play().catch(e => {
-                          console.log("Error playing:", e);
-                          // Si falla, quitamos el video directo
+                  
+                  if(btn && vid) {
+                      btn.onclick = function() {
+                          btn.style.display = 'none';
+                          vid.play().catch(e => { overlay.classList.add('hidden'); });
+                      };
+                      vid.onended = function() {
                           overlay.classList.add('hidden');
-                      });
-                  };
-
-                  // Cuando el video termina
-                  vid.onended = function() {
-                      overlay.classList.add('hidden'); // Desvanecer
-                      setTimeout(() => { overlay.style.display = 'none'; }, 1000);
-                      canvas.focus(); // Dar foco al juego
-                  };
-
-                  // Opcional: Permitir saltar con click en el video
-                  vid.onclick = function() {
-                      vid.currentTime = vid.duration; // Ir al final
-                  };
-              };
+                          setTimeout(() => { overlay.style.display = 'none'; }, 1000);
+                          if(canvas) canvas.focus();
+                      };
+                  }
+              });
           </script>
           """
           
-          # Inyectar todo en el HTML
+          # LEER Y MODIFICAR
           with open(html_path, 'r', encoding='utf-8') as f:
               content = f.read()
           
-          # Insertar estilos en el head
-          content = content.replace('</head>', custom_css + '</head>')
-          # Insertar HTML y JS al final del body
-          content = content.replace('</body>', video_html + video_js + '</body>')
+          # Inyectar CSS en el Head
+          if '</head>' in content:
+              content = content.replace('</head>', custom_css + '</head>')
+          else:
+              content = custom_css + content
+          
+          # Inyectar Video y JS en el Body (O AL FINAL SI FALLA)
+          if '</body>' in content:
+              content = content.replace('</body>', video_html + video_js + '</body>')
+          else:
+              # Si no encuentra el body, lo pegamos al final del todo
+              content = content + video_html + video_js
           
           with open(html_path, 'w', encoding='utf-8') as f:
               f.write(content)
         shell: python
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: build/web
