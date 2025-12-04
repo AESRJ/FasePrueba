@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [ master ]  # O 'master', asegúrate de cómo se llama tu rama principal
+    branches: [ master ]
 
 permissions:
   contents: write
@@ -23,15 +23,61 @@ jobs:
       - name: Install Pygbag
         run: |
           pip install pygbag
-          # Si tuvieras más dependencias: pip install -r requirements.txt
 
       - name: Build Game
         run: |
-          # --build genera la carpeta build/web sin ejecutar el servidor local
-          pygbag --build $GITHUB_WORKSPACE/main.py
+          cd $GITHUB_WORKSPACE
+          pygbag --build main.py
+          mv build/web/main.html build/web/index.html || true
+
+      # --- NUEVO PASO: DISEÑO CYBERPUNK ---
+      - name: Beautify HTML
+        run: |
+          import os
+          
+          html_path = 'build/web/index.html'
+          
+          # Estilos CSS Cyberpunk: Fondo de rejilla y borde de neón
+          custom_style = """
+          <style>
+              body {
+                  background-color: #050510; /* Fondo casi negro */
+                  /* Patrón de rejilla Cyberpunk */
+                  background-image: 
+                      linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+                  background-size: 40px 40px;
+                  /* Centrar el juego */
+                  display: flex;
+                  justify-content: center;
+                  align-items: center;
+                  height: 100vh;
+                  margin: 0;
+                  overflow: hidden;
+              }
+              /* El lienzo del juego (Canvas) */
+              canvas {
+                  box-shadow: 0 0 50px rgba(0, 255, 255, 0.4); /* Resplandor Cian */
+                  border: 2px solid #00ffff; /* Borde Cian */
+                  border-radius: 8px; /* Bordes redondeados */
+              }
+          </style>
+          """
+          
+          # Leemos el HTML generado
+          with open(html_path, 'r', encoding='utf-8') as f:
+              content = f.read()
+          
+          # Inyectamos el estilo antes de cerrar el head
+          content = content.replace('</head>', custom_style + '</head>')
+          
+          # Guardamos el HTML mejorado
+          with open(html_path, 'w', encoding='utf-8') as f:
+              f.write(content)
+        shell: python
 
       - name: Deploy to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          branch: gh-pages # La acción creará esta rama automáticamente
-          folder: build/web # Pygbag pone los archivos web aquí
+          branch: gh-pages
+          folder: build/web
