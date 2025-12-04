@@ -343,6 +343,30 @@ config = {
 
     <script src="https://pygame-web.github.io/archives/0.9//browserfs.min.js"></script>
 
+
+<style>
+    body {
+        background-color: #050510; /* Fondo casi negro */
+        /* Patrón de rejilla Cyberpunk */
+        background-image: 
+            linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+        background-size: 40px 40px;
+        /* Centrar el juego */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+    }
+    /* El lienzo del juego (Canvas) */
+    canvas {
+        box-shadow: 0 0 50px rgba(0, 255, 255, 0.4); /* Resplandor Cian */
+        border: 2px solid #00ffff; /* Borde Cian */
+        border-radius: 8px; /* Bordes redondeados */
+    }
+</style>
 </head>
 
 <body>
