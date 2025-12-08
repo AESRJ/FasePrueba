@@ -18,9 +18,7 @@ SPEED = 5
 MAX_ECHOES = 5
 RESONANCE_DIST = 100 # Distancia en píxeles para activar resonancia
 
-# ==========================================
-# LO NUEVO: ESTADOS DEL JUEGO Y UI
-# ==========================================
+
 
 # Estados (Modos en los que puede estar el juego)
 MENU = "menu"

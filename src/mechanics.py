@@ -1,5 +1,5 @@
 import pygame
-import math # Necesario para la animación
+import math
 from .settings import *
 
 class Lever(pygame.sprite.Sprite):
@@ -31,7 +31,6 @@ class Lever(pygame.sprite.Sprite):
 class Gate(pygame.sprite.Sprite):
     def __init__(self, x, y, width=100, height=20, move_y=150, color=(100, 100, 120), loop=False):
         super().__init__()
-        
         try:
             plat_img = pygame.image.load('assets/images/platform.png').convert_alpha()
             self.image = pygame.transform.scale(plat_img, (width, height))
@@ -46,10 +45,10 @@ class Gate(pygame.sprite.Sprite):
         self.speed = 2
         self.type = "gate"
         self.active = True
-        
         self.loop = loop
         self.moving_to_target = True 
 
+    # CORRECCIÓN: Esta función NO recibe active_entities
     def update_position(self, should_open):
         dy = 0
         if self.loop and should_open:
@@ -81,50 +80,37 @@ class Spike(pygame.sprite.Sprite):
         try:
             spike_img = pygame.image.load('assets/images/pinchos.png').convert_alpha()
             spike_tile = pygame.transform.scale(spike_img, (30, 30))
-            
             self.image = pygame.Surface((width, 30), pygame.SRCALPHA)
             for i in range(0, width, 30):
                 self.image.blit(spike_tile, (i, 0))
-                
         except FileNotFoundError:
             self.image = pygame.Surface((width, 30), pygame.SRCALPHA)
             pygame.draw.polygon(self.image, (255, 0, 0), [(0, 30), (width//2, 0), (width, 30)])
-        
         self.rect = self.image.get_rect(bottomleft=(x, y))
 
 class Barrier(pygame.sprite.Sprite):
     def __init__(self, x, y, width, height, color):
         super().__init__()
-        self.original_image = None # Guardamos la original para la animación
+        self.original_image = None
         self.color = color
-        
         try:
             barrier_img = pygame.image.load('assets/images/barrera.png').convert_alpha()
             self.original_image = pygame.transform.scale(barrier_img, (width, height))
-            
-            # Aplicar color inicial
             tinted = self.original_image.copy()
             tinted.fill(self.color, special_flags=pygame.BLEND_MULT)
             self.image = tinted
-            
         except FileNotFoundError:
             self.image = pygame.Surface((width, height))
             self.image.fill(color)
             self.original_image = self.image.copy()
-            
         self.rect = self.image.get_rect(topleft=(x, y))
         self.active = True
         self.original_pos = (x, y)
 
     def update(self):
-        # --- EFECTO DE PULSACIÓN (Animación) ---
         if self.active and self.original_image:
-            # Usamos el tiempo para crear una onda senoidal
-            # Esto hace que el valor alpha oscile entre 100 y 200
             time = pygame.time.get_ticks()
             alpha = 150 + int(50 * math.sin(time * 0.005)) 
-            
-            # Recreamos la imagen base para que no se degrade
             self.image = self.original_image.copy()
             self.image.fill(self.color, special_flags=pygame.BLEND_MULT)
             self.image.set_alpha(alpha)
@@ -135,3 +121,40 @@ class Barrier(pygame.sprite.Sprite):
             self.rect.topleft = self.original_pos
         else:
             self.rect.x = -2000
+
+class GhostPlatform(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.clean_image = None
+        
+        try:
+            img = pygame.image.load('assets/images/platform.png').convert_alpha()
+            self.clean_image = img
+        except FileNotFoundError:
+            self.clean_image = pygame.Surface((100, 20))
+            self.clean_image.fill((255, 255, 255))
+
+        self.image = self.clean_image.copy()
+        self.rect = self.image.get_rect()
+        self.visible = False 
+        self.current_size = (0, 0)
+
+    def update_state(self, rect_data):
+        if rect_data:
+            x, y, w, h = rect_data
+            self.visible = True
+            
+            if (w, h) != self.current_size:
+                self.image = pygame.transform.scale(self.clean_image, (w, h))
+                tint = pygame.Surface((w, h))
+                tint.fill((0, 255, 255))
+                self.image.blit(tint, (0, 0), special_flags=pygame.BLEND_ADD) 
+                self.image.set_alpha(150)
+                
+                self.current_size = (w, h)
+                self.rect = self.image.get_rect()
+
+            self.rect.topleft = (x, y)
+        else:
+            self.visible = False
+            self.rect.x = -5000

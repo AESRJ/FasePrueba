@@ -9,7 +9,6 @@ class UI:
         
         print("--- Iniciando carga de UI ---")
         
-        # 1. CARGAMOS LOS FONDOS
         self.menu_bg = self.safe_load('assets/images/menu_bg.png', (SCREEN_WIDTH, SCREEN_HEIGHT))
         self.level_select_bg = self.safe_load('assets/images/level_select_bg.png', (SCREEN_WIDTH, SCREEN_HEIGHT))
         
@@ -17,16 +16,15 @@ class UI:
         self.btn_play_img = self.safe_load('assets/images/btn_play.png', (250, 100))
         self.btn_exit_img = self.safe_load('assets/images/btn_exit.png', (250, 100))
         
-        # --- CARGA DINÁMICA DE IMÁGENES DE NIVEL ---
+        # Botón Ayuda (Intenta cargar imagen, si no, usa texto)
+        self.btn_help_img = self.safe_load('assets/images/btn_help.png', (250, 100))
+        
         self.level_images = {}
-        for i in range(1, 6): # Para niveles del 1 al 5
-            # Intenta cargar 'nivel1.png', 'nivel2.png', etc.
-            # Los escalamos a 80x80 (o el tamaño que prefieras para tus botones)
+        for i in range(1, 6): 
             img = self.safe_load(f'assets/images/nivel{i}.png', (80, 80))
             if img:
                 self.level_images[i] = img
             else:
-                # Si no existe la imagen específica, cargamos la genérica si existe
                 self.level_images[i] = self.safe_load('assets/images/level_button.png', (80, 80))
         
         print("--- Carga de UI finalizada ---")
@@ -64,9 +62,7 @@ class UI:
 
         self.screen.blit(final_image, rect.topleft)
         
-        # Dibujamos texto encima si se proporciona (útil para números)
         if text:
-            # Sombra negra para que se lea mejor sobre cualquier imagen
             shadow_surf = self.font_button.render(text, True, (0,0,0))
             shadow_rect = shadow_surf.get_rect(center=(rect.centerx + 2, rect.centery + 2))
             self.screen.blit(shadow_surf, shadow_rect)
@@ -104,24 +100,33 @@ class UI:
         
         action = None
         
+        # --- JUGAR ---
         if self.btn_play_img:
-            if self.draw_image_button(self.btn_play_img, SCREEN_WIDTH//2, 300, clicked, "", "goto_select"):
+            if self.draw_image_button(self.btn_play_img, SCREEN_WIDTH//2, 250, clicked, "", "goto_select"):
                 action = "goto_select"
         else:
-            if self.draw_button("JUGAR", SCREEN_WIDTH//2, 300, 200, 50, clicked, "goto_select"):
+            if self.draw_button("JUGAR", SCREEN_WIDTH//2, 250, 200, 50, clicked, "goto_select"):
                 action = "goto_select"
+
+        # --- CÓMO JUGAR ---
+        if self.btn_help_img:
+            if self.draw_image_button(self.btn_help_img, SCREEN_WIDTH//2, 375, clicked, "", "instructions"):
+                action = "instructions"
+        else:
+            if self.draw_button("CÓMO JUGAR", SCREEN_WIDTH//2, 375, 200, 50, clicked, "instructions"):
+                action = "instructions"
             
+        # --- SALIR ---
         if self.btn_exit_img:
-            if self.draw_image_button(self.btn_exit_img, SCREEN_WIDTH//2, 450, clicked, "", "exit"):
+            if self.draw_image_button(self.btn_exit_img, SCREEN_WIDTH//2, 500, clicked, "", "exit"):
                 action = "exit"
         else:
-            if self.draw_button("SALIR", SCREEN_WIDTH//2, 450, 200, 50, clicked, "exit"):
+            if self.draw_button("SALIR", SCREEN_WIDTH//2, 500, 200, 50, clicked, "exit"):
                 action = "exit"
         
         return action
 
     def draw_level_select(self, unlocked_levels, clicked):
-        # 1. DIBUJAR FONDO
         if self.level_select_bg:
             self.screen.blit(self.level_select_bg, (0, 0))
         elif self.menu_bg:
@@ -138,25 +143,16 @@ class UI:
             y_pos = 300
             
             if i > unlocked_levels:
-                # Nivel Bloqueado (Candado)
                 rect = pygame.Rect(0, 0, 80, 80)
                 rect.center = (x_pos, y_pos)
                 pygame.draw.rect(self.screen, COLOR_LOCKED, rect, border_radius=10)
-                # Dibujamos un candado o X
                 self.draw_text("X", 30, x_pos, y_pos, (150, 150, 150))
             else:
-                # Nivel Desbloqueado
-                # Recuperamos la imagen específica del diccionario
                 img = self.level_images.get(i)
-                
                 if img:
-                     # Usamos la imagen cargada (nivel1.png, etc)
-                     # Pasamos "" como texto para que NO dibuje el número encima si la imagen ya lo tiene.
-                     # Si quieres el número encima, cambia "" por f"{i}"
                      if self.draw_image_button(img, x_pos, y_pos, clicked, "", f"start_game_{i}"):
                         action = f"start_game_{i}"
                 else:
-                    # Fallback si no hay imagen: botón rectangular simple
                     if self.draw_button(f"{i}", x_pos, y_pos, 80, 80, clicked, f"start_game_{i}"):
                         action = f"start_game_{i}"
 

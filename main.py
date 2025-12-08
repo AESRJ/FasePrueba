@@ -1,21 +1,7 @@
 import pygame
 import asyncio
 import math
-import os  # <--- IMPORTANTE: Asegúrate de importar os
-import sys # <--- IMPORTANTE: Importar sys
 
-# --- CORRECCIÓN DE RUTAS PARA EJECUCIÓN LOCAL ---
-# Esto hace que el juego encuentre la carpeta assets sin importar desde dónde lo ejecutes
-if getattr(sys, 'frozen', False):
-    # Si se compila como .exe
-    base_dir = os.path.dirname(sys.executable)
-else:
-    # Ejecución normal con python main.py
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-
-# Cambiamos el directorio de trabajo a la base del proyecto
-os.chdir(base_dir)
-# -------------------
 from src.settings import *
 from src.player import Player
 from src.platform import Platform
@@ -31,6 +17,62 @@ from src.levels.level3 import load_level_3
 from src.levels.level4 import load_level_4
 from src.levels.level5 import load_level_5
 
+
+def draw_instructions_screen(screen, font):
+    # Definición de colores
+    BG_COLOR = (15, 15, 30)
+    TITLE_COLOR = (0, 255, 255)   # Cyan Cyberpunk
+    TEXT_COLOR = (220, 220, 220)  # Blanco suave
+    KEY_COLOR = (255, 200, 50)    # Amarillo para teclas
+    
+    screen.fill(BG_COLOR)
+    
+    # --- TÍTULO ---
+    title_surf = font.render("/// MANUAL DE OPERACIONES ///", True, TITLE_COLOR)
+    title_rect = title_surf.get_rect(center=(SCREEN_WIDTH // 2, 50))
+    screen.blit(title_surf, title_rect)
+
+    # --- LISTA DE INSTRUCCIONES ---
+    lines = [
+        ("OBJETIVO:", TITLE_COLOR, 0),
+        ("Recupera los cristales y llega al portal.", TEXT_COLOR, 20),
+        ("", TEXT_COLOR, 0),
+        
+        ("MECÁNICAS:", TITLE_COLOR, 0),
+        ("- Palancas:", KEY_COLOR, 20),
+        ("  Actívalas para abrir compuertas o mover plataformas.", TEXT_COLOR, 40),
+        ("- Ecos (Clones):", KEY_COLOR, 20),
+        ("  Graban tus movimientos. Úsalos para activar", TEXT_COLOR, 40),
+        ("  varios interruptores a la vez.", TEXT_COLOR, 40),
+        ("", TEXT_COLOR, 0),
+        
+        ("CONTROLES:", TITLE_COLOR, 0),
+        ("[ W, A, S, D ]", KEY_COLOR, 20),
+        ("  Movimiento del personaje.", TEXT_COLOR, 150),
+        ("[ ESPACIO / E ]", KEY_COLOR, 20),
+        ("  Saltar / Interactuar.", TEXT_COLOR, 150),
+        ("[ Z ]", KEY_COLOR, 20),
+        ("  CREAR ECO (Inicia grabación).", TEXT_COLOR, 150),
+        ("[ C ]", KEY_COLOR, 20),
+        ("  BORRAR Ecos existentes.", TEXT_COLOR, 150),
+        ("[ R ]", KEY_COLOR, 20),
+        ("  Reiniciar nivel.", TEXT_COLOR, 150),
+    ]
+
+    start_y = 100
+    base_x = 50
+    line_height = 30
+
+    for text, color, x_offset in lines:
+        surf = font.render(text, True, color)
+        screen.blit(surf, (base_x + x_offset, start_y))
+        start_y += line_height
+
+    # --- PIE DE PÁGINA ---
+    footer_surf = font.render("Presiona [ESC] o haz CLIC para volver", True, TITLE_COLOR)
+    footer_rect = footer_surf.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 40))
+    screen.blit(footer_surf, footer_rect)
+
 async def main():
     pygame.init()
     
@@ -44,6 +86,7 @@ async def main():
     # --- ESTADO INICIAL ---
     game_state = MENU
     current_level = 1
+    INSTRUCTIONS = 3 # Estado para las instrucciones
     max_unlocked_level = 1 
     TOTAL_LEVELS = 5 
     
@@ -54,27 +97,21 @@ async def main():
     except FileNotFoundError:
         hud_font = pygame.font.SysFont("Consolas", 20, bold=True)
 
-    # --- CARGA DE FONDOS DINÁMICA ---
+    # Carga de Fondos
     level_backgrounds = {}
-    
-    # 1. Cargar fondo por defecto (fallback)
     try:
         default_bg = pygame.image.load('assets/images/level_bg.png').convert()
         default_bg = pygame.transform.scale(default_bg, (SCREEN_WIDTH, SCREEN_HEIGHT))
     except FileNotFoundError:
         default_bg = None
 
-    # 2. Cargar fondos específicos (level1_bg.png, level2_bg.png...)
-    print("--- Cargando fondos de nivel ---")
     for i in range(1, TOTAL_LEVELS + 1):
         try:
             path = f'assets/images/level{i}_bg.png'
             bg = pygame.image.load(path).convert()
             bg = pygame.transform.scale(bg, (SCREEN_WIDTH, SCREEN_HEIGHT))
             level_backgrounds[i] = bg
-            print(f"Fondo cargado para Nivel {i}")
         except FileNotFoundError:
-            print(f"No se encontró {path}, usando fondo por defecto.")
             level_backgrounds[i] = default_bg
 
     # Grupos de Sprites
@@ -84,6 +121,7 @@ async def main():
     levers = pygame.sprite.Group() 
     gates = pygame.sprite.Group()  
     
+    # Variables Específicas
     level_hazards = [] 
     level_barriers = {} 
     special_levers = {}
@@ -165,6 +203,8 @@ async def main():
                 
                 if not show_popup: 
                     if event.type == pygame.KEYDOWN:
+                        
+                        # --- CREAR ECO ---
                         if event.key == pygame.K_z and player:
                              if current_level == 1:
                                  print("Habilidad bloqueada")
@@ -173,7 +213,9 @@ async def main():
                                 new_echo = Player(100, SCREEN_HEIGHT - 150, is_echo=True)
                                 new_echo.recording = list(player.recording)
                                 echoes.append(new_echo)
+                                
                                 all_sprites.add(new_echo)
+                                all_sprites.add(new_echo.ghost_platform)
                                 
                                 start_pos = (player.recording[0]['x'], player.recording[0]['y']) if player.recording else (100, 500)
                                 player.rect.topleft = start_pos
@@ -183,13 +225,16 @@ async def main():
                                  print("¡Sin fragmentos!")
                         
                         if event.key == pygame.K_c:
-                            for e in echoes: e.kill()
+                            for e in echoes: 
+                                e.ghost_platform.kill()
+                                e.kill()
                             echoes.clear()
 
                         if event.key == pygame.K_ESCAPE:
                             game_state = MENU
                             assets.play_music("menu")
                         
+                        # CHEAT
                         if event.key == pygame.K_p: 
                              if current_level < TOTAL_LEVELS: 
                                 current_level += 1
@@ -232,6 +277,7 @@ async def main():
             else:
                 all_levers_active = False
 
+            # --- LÓGICA POR NIVEL ---
             if current_level == 3:
                 lev_br = special_levers.get("bottom_right")
                 lev_tl = special_levers.get("top_left")
@@ -274,6 +320,7 @@ async def main():
             elif current_level == 5:
                 bar_center = level_barriers.get("center")
                 all_levs = special_levers.get("all", [])
+                
                 if bar_center:
                     all_ok = all(l.activated for l in all_levs)
                     bar_center.update_state(not all_ok)
@@ -289,6 +336,7 @@ async def main():
             else:
                 for gate in gates:
                     riders = [e for e in active_entities if abs(e.rect.bottom - gate.rect.top) < 6 and e.rect.right > gate.rect.left and e.rect.left < gate.rect.right]
+                    # CORREGIDO: Eliminado el argumento active_entities que causaba el error
                     dy = gate.update_position(should_open=all_levers_active)
                     if dy != 0:
                         for rider in riders:
@@ -309,7 +357,7 @@ async def main():
             for b in level_barriers.values():
                 if b.active: 
                     physic_platforms.add(b)
-                    b.update()
+                    b.update() # Animación
 
             player.update(physic_platforms, input_active=not show_popup)
             for echo in echoes: echo.update(None)
@@ -330,7 +378,7 @@ async def main():
                     if tutorial_step == 0: 
                         tutorial_step = 2 
                         show_popup = True
-                        popup_text = "Fragmento de alma adquirido. Júntalos todos para escapar de esta realidad"
+                        popup_text = "FRAGMENTO ADQUIRIDO. COLECCIONA TODOS."
                 
                 if current_level == 1 and len(crystals) == 0:
                     portal.activate()
@@ -368,14 +416,10 @@ async def main():
                     game_state = MENU
                     assets.play_music("menu")
 
-            # --- DIBUJADO DE FONDO VARIABLE ---
-            # Seleccionamos el fondo correcto del diccionario
+            # --- DIBUJADO DEL JUEGO ---
             bg_image = level_backgrounds.get(current_level)
-            
-            if bg_image:
-                screen.blit(bg_image, (0,0))
-            else:
-                screen.fill(COLOR_BG)
+            if bg_image: screen.blit(bg_image, (0,0))
+            else: screen.fill(COLOR_BG)
                 
             all_sprites.draw(screen)
             
@@ -407,10 +451,28 @@ async def main():
                 pop_rect = pop_text_surf.get_rect(center=(SCREEN_WIDTH//2, 100))
                 screen.blit(pop_text_surf, pop_rect)
 
+        # --- MENU PRINCIPAL ---
         elif game_state == MENU:
             action = ui.draw_main_menu(click_event)
-            if action == "goto_select": game_state = LEVEL_SELECT
-            elif action == "exit": running = False
+            if action == "goto_select": 
+                game_state = LEVEL_SELECT
+            elif action == "exit": 
+                running = False
+            elif action == "instructions": # Botón presionado
+                game_state = INSTRUCTIONS
+            
+            keys = pygame.key.get_pressed()
+            if keys[pygame.K_i]: # Tecla I presionada
+                game_state = INSTRUCTIONS
+
+        # --- PANTALLA INSTRUCCIONES ---
+        elif game_state == INSTRUCTIONS:
+            draw_instructions_screen(screen, hud_font)
+            
+            keys = pygame.key.get_pressed()
+            # Salir con ESC o clic
+            if keys[pygame.K_ESCAPE] or click_event:
+                game_state = MENU
 
         elif game_state == LEVEL_SELECT:
             action = ui.draw_level_select(max_unlocked_level, click_event)

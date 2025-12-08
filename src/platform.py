@@ -9,7 +9,7 @@ class Platform(pygame.sprite.Sprite):
         
         self.images = {}
         try:
-            # Cargamos imágenes
+            
             floor_img = pygame.image.load('assets/images/piso.png').convert_alpha()
             medium_img = pygame.image.load('assets/images/platform.png').convert_alpha()
             small_img = pygame.image.load('assets/images/plataforma_chica.png').convert_alpha()
@@ -48,10 +48,7 @@ class Platform(pygame.sprite.Sprite):
             
         self.rect = self.image.get_rect(topleft=(x, y))
         
-        # --- CAMBIO CRÍTICO: HITBOX FIEL ---
-        # Eliminamos los ajustes manuales de altura (-10).
-        # Ahora confiamos en que tu imagen es sólida desde el píxel 0.
-        # Esto soluciona que el personaje se hunda o flote.
+       #Bug hitbox
         
         self.active = not is_resonance 
 
